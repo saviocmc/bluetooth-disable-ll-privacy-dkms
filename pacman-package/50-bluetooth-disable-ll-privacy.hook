@@ -1,0 +1,16 @@
+# Abort a "linux" kernel install or upgrade when the bluetooth-disable-ll-privacy patch cannot be
+# applied to it, instead of letting that kernel fall back to the stock bluetooth module.
+# The 50- prefix sorts it before 70-dkms-upgrade.hook and 71-dkms-remove.hook: pacman stops at the
+# first failing PreTransaction hook, so an abort leaves the current kernel's module in place.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/lib/modules/*/vmlinuz
+
+[Action]
+Description = Checking that the Bluetooth LL Privacy patch applies to the new kernel...
+When = PreTransaction
+Exec = /usr/share/libalpm/scripts/bluetooth-disable-ll-privacy-precheck
+NeedsTargets
+AbortOnFail

@@ -1,0 +1,32 @@
+# Maintainer: saviocmc <saviocmc@gmail.com>
+# Bluetooth kernel module with LL Privacy masked, rebuilt by DKMS for every "linux" kernel
+# After changing the patch: bump pkgrel, run updpkgsums, then makepkg -si.
+pkgname=bluetooth-disable-ll-privacy-dkms
+_dkmsname=bluetooth-disable-ll-privacy
+pkgver=1.0
+pkgrel=1
+pkgdesc="Bluetooth kernel module with LL Privacy masked, works around Intel 9560 firmware resets (Hardware error 0x0c); DKMS"
+arch=(any)
+license=(GPL-2.0-only)
+depends=(dkms git linux-headers)
+install=$pkgname.install
+source=(dkms.conf pre-build.sh bluetooth-disable-ll-privacy.patch
+        50-bluetooth-disable-ll-privacy.hook precheck.sh)
+sha256sums=('522a0e85c2b6acb9894b44fd3d213e126f69d4be220a3afe8951d0cf4dd1428d'
+            '72ac26780a898aa1ab6ae134275ff6bc60626cd18244cd0eadb10c4665b620be'
+            '3a9b216d281fa4bc7143e90511684b63946060a8aab6baaa60b8f98fb48752e0'
+            '89c0a1df7c2b2dac3f0110bed46089754c1fc31d100bbd99a9ba89817a7db80d'
+            '9184ab1d5dc2d51eec5ae5df7f7c249ad634945fb0013ba7bf92d80a0a77fb26')
+
+package() {
+  local dest="$pkgdir/usr/src/$_dkmsname-$pkgver"
+  install -Dm644 dkms.conf bluetooth-disable-ll-privacy.patch -t "$dest"
+  install -Dm755 pre-build.sh -t "$dest"
+  sed -i "s/@PKGVER@/$pkgver/" "$dest/dkms.conf"
+
+  # Pre-check that aborts a kernel upgrade the patch no longer applies to
+  local precheck="$pkgdir/usr/share/libalpm/scripts/$_dkmsname-precheck"
+  install -Dm644 50-bluetooth-disable-ll-privacy.hook -t "$pkgdir/usr/share/libalpm/hooks"
+  install -Dm755 precheck.sh "$precheck"
+  sed -i "s/@PKGVER@/$pkgver/" "$precheck"
+}

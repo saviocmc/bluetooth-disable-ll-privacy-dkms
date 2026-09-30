@@ -1,0 +1,14 @@
+# makepkg build output
+pkg/
+src/
+*.pkg.tar
+*.pkg.tar.*
+*.log
+
+# makepkg --source / downloaded sources
+*.src.tar.gz
+*.tar.*
+*.zip
+
+# namcap / misc
+*.sig

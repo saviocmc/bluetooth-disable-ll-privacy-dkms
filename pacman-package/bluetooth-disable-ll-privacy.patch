@@ -1,0 +1,53 @@
+diff --git a/net/bluetooth/hci_event.c b/net/bluetooth/hci_event.c
+index f502be7..309214d 100644
+--- a/net/bluetooth/hci_event.c
++++ b/net/bluetooth/hci_event.c
+@@ -35,6 +35,17 @@
+ #include "smp.h"
+ #include "msft.h"
+ #include "eir.h"
++#include <linux/module.h>
++
++/* Ignore the controller's LL Privacy feature bit (on by default; set
++ * bluetooth.disable_ll_privacy=0 for the stock behaviour): Intel 9560/JfP
++ * hits firmware "Hardware error 0x0c" once the host uses the resolving list.
++ */
++static bool disable_ll_privacy = true;
++module_param(disable_ll_privacy, bool, 0644);
++MODULE_PARM_DESC(disable_ll_privacy,
++		 "Ignore controller LL Privacy support (do not use resolving list; default on)");
++
+ 
+ #define ZERO_KEY "\x00\x00\x00\x00\x00\x00\x00\x00" \
+ 		 "\x00\x00\x00\x00\x00\x00\x00\x00"
+@@ -1237,6 +1248,11 @@ static u8 hci_cc_le_read_local_features(struct hci_dev *hdev, void *data,
+ 
+ 	memcpy(hdev->le_features, rp->features, 8);
+ 
++	if (disable_ll_privacy && (hdev->le_features[0] & HCI_LE_LL_PRIVACY)) {
++		bt_dev_info(hdev, "LL Privacy support masked (disable_ll_privacy=1)");
++		hdev->le_features[0] &= ~HCI_LE_LL_PRIVACY;
++	}
++
+ 	return rp->status;
+ }
+ 
+diff --git a/net/bluetooth/hci_sync.c b/net/bluetooth/hci_sync.c
+index a8d2a3f..46ca85f 100644
+--- a/net/bluetooth/hci_sync.c
++++ b/net/bluetooth/hci_sync.c
+@@ -2578,6 +2578,14 @@ static int hci_le_add_accept_list_sync(struct hci_dev *hdev,
+ 		return 0;
+ 	}
+ 
++	/* Accept list can not be used with RPAs unless the controller resolves
++	 * them (LL Privacy). This restores the pre-6.14 behaviour so that RPA
++	 * devices still auto-connect via host-side resolution.
++	 */
++	if (!ll_privacy_capable(hdev) &&
++	    hci_find_irk_by_addr(hdev, &params->addr, params->addr_type))
++		return -EINVAL;
++
+ 	/* Select filter policy to accept all advertising */
+ 	if (*num_entries >= hdev->le_accept_list_size)
+ 		return -ENOSPC;
