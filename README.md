@@ -228,6 +228,17 @@ package fetches that kernel's `net/bluetooth` and checks that the patch applies.
 output. The `dkms` hooks then rebuild the module for the new kernel in the same transaction
 ("Install DKMS modules") and remove it from the old one.
 
+Each kernel upgrade also prints this warning, which is harmless:
+
+```
+warning: could not get file information for usr/lib/modules/<old kernel>/kernel/net/bluetooth/bluetooth.ko.zst
+```
+
+When DKMS installs the patched module, it moves the stock one out of the kernel's directory, and it
+only puts it back in a hook that runs just before the old kernel is removed. pacman checks disk
+space before any hook runs, so at that moment the file is missing and pacman warns about it. The
+old kernel is then removed normally.
+
 The check fails if there is no network or if the patch no longer applies to the new kernel. Then
 pacman aborts the whole upgrade and nothing changes, so the current kernel keeps the patched
 module. You have two ways forward:
